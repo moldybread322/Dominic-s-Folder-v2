@@ -1,21 +1,60 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, Button, FlatList, TextInput, StyleSheet } from 'react-native';
-
-// Import the custom components
-import BookList from './components/BookList';
 import AddBookForm from './components/AddBookForm';
+import BookList from './components/BookList';
 
 export default function App() {
   const [books, setBooks] = useState([]);
   
-  // Function to add a book to the list
-  const addBook = (bookTitle) => {
-    setBooks([...books, { key: Math.random().toString(), title: bookTitle }]);
+  // Fetch books from mock API
+  const fetchBooks = async () => {
+    try {
+      const response = await fetch('http://localhost:5000/books');  // Mock server URL
+      const data = await response.json();
+      setBooks(data);
+    } catch (error) {
+      console.error('Error fetching books:', error);
+    }
   };
 
-  // Function to remove a book from the list
-  const removeBook = (key) => {
-    setBooks(books.filter((book) => book.key !== key));
+  // Fetch books when the app starts
+  useEffect(() => {
+    fetchBooks();
+  }, []);
+
+  // Function to add a book to the list (POST request)
+  const addBook = async (bookTitle) => {
+    const newBook = { title: bookTitle };
+    try {
+      const response = await fetch('http://localhost:5000/books', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(newBook),
+      });
+
+      if (response.ok) {
+        fetchBooks(); // Reload books after adding
+      }
+    } catch (error) {
+      console.error('Error adding book:', error);
+    }
+  };
+
+  // Function to remove a book from the list (DELETE request)
+  const removeBook = async (bookId) => {
+    try {
+      const response = await fetch(`http://localhost:5000/books/${bookId}`, {
+        method: 'DELETE',
+      });
+
+      if (response.ok) {
+        fetchBooks(); // Reload books after deleting
+      }
+    } catch (error) {
+      console.error('Error deleting book:', error);
+    }
   };
 
   return (

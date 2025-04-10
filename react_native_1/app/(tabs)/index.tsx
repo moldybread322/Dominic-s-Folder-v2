@@ -17,11 +17,42 @@ const IndexScreen = () => {
   const [author, setAuthor] = useState('');
 
   // Function to add a new book
-  const addBook = () => {
+  const addBook = async () => {
     if (title && author) {
-      setBooks([...books, { id: uuidv4(), title, author }]);
-      setTitle('');   // Clear input field after adding
-      setAuthor('');
+      const newBook = {
+        title,
+        author,
+      };
+
+      try {
+        // Send POST request to JSONPlaceholder API to add the new book
+        const response = await fetch('https://jsonplaceholder.typicode.com/posts', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(newBook),
+        });
+
+        const data = await response.json(); // Parse the response from the API
+        console.log('Book added:', data); // Log the response from the API
+
+        // Update local books list with the new book
+        setBooks((prevBooks) => [
+          ...prevBooks,
+          {
+            id: data.id.toString(),  // Use the ID from the API response
+            title,
+            author,
+          },
+        ]);
+
+        // Clear input fields after adding
+        setTitle('');
+        setAuthor('');
+      } catch (error) {
+        console.error('Error adding book:', error);
+      }
     }
   };
 
