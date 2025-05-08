@@ -1,32 +1,77 @@
-import React, { useState } from 'react'; // Import useState
+import React, { useState } from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import IndexScreen from './index';  // Assuming this is correct
-import GenresScreen from './GenresScreen';  // Importing GenresScreen
-import SavedScreen from './SavedScreen';  // Importing SavedScreen
-import RecommendationsScreen from './Recommendations';  // Import RecommendationsScreen
+import HomeScreen from './HomeScreen';
+import IndexScreen from './IndexScreen';
+import GenresScreen from './GenresScreen';
+import SavedScreen from './SavedScreen';
+import RecommendationsScreen from './Recommendations';
+import Ionicons from 'react-native-vector-icons/Ionicons';
 
 const Tab = createBottomTabNavigator();
 
 const TabsLayout = () => {
   const [savedBooks, setSavedBooks] = useState<any[]>([]);
 
-  // Function to save books
   const handleSaveBook = (book: any) => {
     setSavedBooks((prevBooks) => [...prevBooks, book]);
   };
 
   return (
     <Tab.Navigator>
-      <Tab.Screen name="Book List" component={IndexScreen} />
-      <Tab.Screen name="Genres" component={GenresScreen} />
-      
-      {/* Pass the onSave function to RecommendationsScreen as a prop */}
-      <Tab.Screen 
-        name="Recommendations" 
-        children={() => <RecommendationsScreen onSave={handleSaveBook} />} 
+      {/* Home Screen */}
+      <Tab.Screen
+        name="Home"
+        component={HomeScreen}
+        options={{
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="home" size={size} color={color} />
+          ),
+        }}
       />
-      
-      <Tab.Screen name="Saved" component={SavedScreen} />
+
+      {/* Book List Screen */}
+      <Tab.Screen
+        name="Book List"
+        component={IndexScreen}
+        options={{
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="book" size={size} color={color} />
+          ),
+        }}
+      />
+
+      {/* Genres Screen */}
+      <Tab.Screen
+        name="Genres"
+        component={() => <GenresScreen onSaveBook={handleSaveBook} />} // Pass onSaveBook prop directly here
+        options={{
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="grid" size={size} color={color} />
+          ),
+        }}
+      />
+
+      {/* Recommendations Screen */}
+      <Tab.Screen
+        name="Recommendations"
+        component={() => <RecommendationsScreen onSave={handleSaveBook} />} // Pass onSave prop here as well
+        options={{
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="star" size={size} color={color} />
+          ),
+        }}
+      />
+
+      {/* Saved Books Screen */}
+      <Tab.Screen
+        name="Saved"
+        component={() => <SavedScreen savedBooks={savedBooks} />} // Pass savedBooks here
+        options={{
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="bookmark" size={size} color={color} />
+          ),
+        }}
+      />
     </Tab.Navigator>
   );
 };

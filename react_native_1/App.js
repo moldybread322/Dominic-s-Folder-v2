@@ -1,28 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, Button, FlatList, TextInput, StyleSheet } from 'react-native';
+import { NavigationContainer } from '@react-navigation/native';
+import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { View, Text, Button, StyleSheet } from 'react-native';
+import GenresScreen from './screens/GenresScreen'; // Import your GenresScreen
 import AddBookForm from './components/AddBookForm';
 import BookList from './components/BookList';
 
+const Tab = createBottomTabNavigator();
+
 export default function App() {
   const [books, setBooks] = useState([]);
-  
-  // Fetch books from mock API
-  const fetchBooks = async () => {
-    try {
-      const response = await fetch('http://localhost:5000/books');  // Mock server URL
-      const data = await response.json();
-      setBooks(data);
-    } catch (error) {
-      console.error('Error fetching books:', error);
-    }
-  };
 
-  // Fetch books when the app starts
-  useEffect(() => {
-    fetchBooks();
-  }, []);
-
-  // Function to add a book to the list (POST request)
+  // Function to add a book to the list
   const addBook = async (bookTitle) => {
     const newBook = { title: bookTitle };
     try {
@@ -42,31 +31,43 @@ export default function App() {
     }
   };
 
-  // Function to remove a book from the list (DELETE request)
-  const removeBook = async (bookId) => {
+  const fetchBooks = async () => {
     try {
-      const response = await fetch(`http://localhost:5000/books/${bookId}`, {
-        method: 'DELETE',
-      });
-
-      if (response.ok) {
-        fetchBooks(); // Reload books after deleting
-      }
+      const response = await fetch('http://localhost:5000/books');  // Mock server URL
+      const data = await response.json();
+      setBooks(data);
     } catch (error) {
-      console.error('Error deleting book:', error);
+      console.error('Error fetching books:', error);
     }
   };
 
+  useEffect(() => {
+    fetchBooks();
+  }, []);
+
   return (
-    <View style={styles.container}>
-      <Text style={styles.header}>Book List</Text>
-      <AddBookForm onAddBook={addBook} />
-      {books.length > 0 ? (
-        <BookList books={books} onRemoveBook={removeBook} />
-      ) : (
-        <Text style={styles.noBooks}>No books in the list</Text>
-      )}
-    </View>
+    <NavigationContainer>
+      <Tab.Navigator>
+        <Tab.Screen name="Genres">
+          {() => (
+            <GenresScreen onSaveBook={addBook} />
+          )}
+        </Tab.Screen>
+        <Tab.Screen name="Book List">
+          {() => (
+            <View style={styles.container}>
+              <Text style={styles.header}>Book List</Text>
+              <AddBookForm onAddBook={addBook} />
+              {books.length > 0 ? (
+                <BookList books={books} onRemoveBook={removeBook} />
+              ) : (
+                <Text style={styles.noBooks}>No books in the list</Text>
+              )}
+            </View>
+          )}
+        </Tab.Screen>
+      </Tab.Navigator>
+    </NavigationContainer>
   );
 }
 

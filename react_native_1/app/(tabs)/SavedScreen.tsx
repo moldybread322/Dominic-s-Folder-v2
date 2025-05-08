@@ -1,47 +1,52 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, FlatList, StyleSheet, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, FlatList, StyleSheet, TouchableOpacity, Alert, Image } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 interface Book {
-  key: string;
-  title: string;
-  authors: { name: string }[];
+  id: string;
+  volumeInfo?: {
+    title: string;
+    authors: string[];
+    imageLinks?: {
+      thumbnail: string;
+    };
+  };
 }
 
-const SavedScreen = () => {
-  const [savedBooks, setSavedBooks] = useState<Book[]>([]);
+const SavedScreen = ({ savedBooks }: { savedBooks: Book[] }) => {
+  const [localSavedBooks, setLocalSavedBooks] = useState<Book[]>(savedBooks);
 
-  // Load saved books from AsyncStorage when the screen is mounted
-  useEffect(() => {
-    const loadSavedBooks = async () => {
-      try {
-        const savedBooksString = await AsyncStorage.getItem('savedBooks');
-        if (savedBooksString) {
-          setSavedBooks(JSON.parse(savedBooksString));
-        }
-      } catch (error) {
-        console.error('Error loading saved books:', error);
-      }
-    };
-    loadSavedBooks();
-  }, []);
-
-  // Remove a book from saved books
-  const removeBook = async (bookKey: string) => {
+  // Load saved books from AsyncStorage whenever the component is mounted or savedBooks changes
+  const loadSavedBooks = async () => {
     try {
-      // Filter out the book that is to be removed
-      const updatedBooks = savedBooks.filter((book) => book.key !== bookKey);
+      const savedBooksString = await AsyncStorage.getItem('savedBooks');
+      if (savedBooksString) {
+        setLocalSavedBooks(JSON.parse(savedBooksString));
+      }
+    } catch (error) {
+      console.error('Error loading saved books:', error);
+    }
+  };
 
-      // Update state and AsyncStorage
-      setSavedBooks(updatedBooks);
+  useEffect(() => {
+    loadSavedBooks();
+  }, []); // Load saved books only once when the component mounts
+
+  // Function to remove a book from saved books
+  const removeBook = async (bookId: string) => {
+    try {
+      const updatedBooks = localSavedBooks.filter((book) => book.id !== bookId);
+      setLocalSavedBooks(updatedBooks);
       await AsyncStorage.setItem('savedBooks', JSON.stringify(updatedBooks));
+
+      // Reload the saved books to ensure the UI updates automatically
+      loadSavedBooks(); 
     } catch (error) {
       console.error('Error removing book:', error);
     }
   };
 
-  // Confirm before removing a book
-  const confirmRemove = (bookKey: string) => {
+  const confirmRemove = (bookId: string) => {
     Alert.alert(
       "Remove Book",
       "Are you sure you want to remove this book from saved?",
@@ -52,32 +57,46 @@ const SavedScreen = () => {
         },
         {
           text: "OK",
-          onPress: () => removeBook(bookKey)
+          onPress: () => removeBook(bookId)
         }
       ]
+    );
+  };
+
+  // Render the book item with additional checks for imageLinks and volumeInfo
+  const renderBookItem = ({ item }: { item: Book }) => {
+    const imageUrl = item?.volumeInfo?.imageLinks?.thumbnail;
+    const title = item?.volumeInfo?.title || 'Untitled';
+    const authors = item?.volumeInfo?.authors?.join(', ') || 'Unknown Author';
+
+    return (
+      <View style={styles.bookItem}>
+        {imageUrl ? (
+          <Image source={{ uri: imageUrl }} style={styles.bookImage} />
+        ) : (
+          <Text style={styles.noImageText}>No Image Available</Text>
+        )}
+        <View style={styles.bookDetails}>
+          <Text style={styles.bookTitle}>{title}</Text>
+          <Text style={styles.author}>{`by ${authors}`}</Text>
+          <TouchableOpacity onPress={() => confirmRemove(item.id)}>
+            <Text style={styles.removeButton}>Remove</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
     );
   };
 
   return (
     <View style={styles.container}>
       <Text style={styles.heading}>Saved Books</Text>
-      {savedBooks.length === 0 ? (
+      {localSavedBooks.length === 0 ? (
         <Text style={styles.noBooks}>No saved books</Text>
       ) : (
         <FlatList
-          data={savedBooks}
-          keyExtractor={(item) => item.key}
-          renderItem={({ item }) => (
-            <View style={styles.bookItem}>
-              <Text style={styles.bookTitle}>{item.title}</Text>
-              <Text style={styles.author}>
-                by {item.authors?.[0]?.name || 'Unknown Author'}
-              </Text>
-              <TouchableOpacity onPress={() => confirmRemove(item.key)}>
-                <Text style={styles.removeButton}>Remove</Text>
-              </TouchableOpacity>
-            </View>
-          )}
+          data={localSavedBooks}
+          keyExtractor={(item) => item.id}
+          renderItem={renderBookItem}
         />
       )}
     </View>
@@ -108,6 +127,24 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     elevation: 2,
     marginBottom: 10,
+    flexDirection: 'row',
+  },
+  bookImage: {
+    width: 50,
+    height: 75,
+    marginRight: 10,
+  },
+  noImageText: {
+    width: 50,
+    height: 75,
+    marginRight: 10,
+    textAlign: 'center',
+    lineHeight: 75,
+    color: '#555',
+    fontSize: 12,
+  },
+  bookDetails: {
+    flex: 1,
   },
   bookTitle: {
     fontSize: 16,

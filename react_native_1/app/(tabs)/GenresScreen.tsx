@@ -1,92 +1,72 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, FlatList, StyleSheet, ActivityIndicator, TouchableOpacity } from 'react-native';
-import { Picker } from '@react-native-picker/picker';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { View, Text, Button, FlatList, StyleSheet, Image, TouchableOpacity } from 'react-native';
 
 interface Book {
-  key: string;
+  id: string;
   title: string;
-  authors: { name: string }[];
+  author: string;
+  image: string;
 }
 
-const genres = [
-  { label: 'Science Fiction', value: 'science_fiction' },
-  { label: 'Fantasy', value: 'fantasy' },
-  { label: 'Mystery', value: 'mystery' },
-  { label: 'Romance', value: 'romance' },
-  { label: 'Horror', value: 'horror' },
-];
+// Type for props
+interface GenresScreenProps {
+  onSaveBook: (book: Book) => void;
+}
 
-const GenresScreen = () => {
-  const [selectedGenre, setSelectedGenre] = useState('science_fiction');
+const GenresScreen: React.FC<GenresScreenProps> = ({ onSaveBook }) => {
+  const [selectedGenre, setSelectedGenre] = useState<string>('fiction');
   const [books, setBooks] = useState<Book[]>([]);
-  const [loading, setLoading] = useState(false);
 
-  const fetchBooks = async (genre: string) => {
+  const fetchBooksByGenre = async (genre: string) => {
     try {
-      setLoading(true);
-      const response = await fetch(`https://openlibrary.org/subjects/${genre}.json`);
+      const response = await fetch(`https://www.googleapis.com/books/v1/volumes?q=subject:${genre}`);
       const data = await response.json();
-      setBooks(data.works);
+      const fetchedBooks = data.items.map((item: any) => ({
+        id: item.id,
+        title: item.volumeInfo.title,
+        author: item.volumeInfo.authors?.join(', ') || 'Unknown',
+        image: item.volumeInfo.imageLinks?.thumbnail || '',
+      }));
+      setBooks(fetchedBooks);
     } catch (error) {
       console.error('Error fetching books:', error);
-    } finally {
-      setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchBooks(selectedGenre);
+    fetchBooksByGenre(selectedGenre);
   }, [selectedGenre]);
-
-  // Save the book to AsyncStorage
-  const saveBook = async (book: Book) => {
-    try {
-      const savedBooksString = await AsyncStorage.getItem('savedBooks');
-      const savedBooks = savedBooksString ? JSON.parse(savedBooksString) : [];
-
-      // Check if the book is already saved
-      if (!savedBooks.some((savedBook: Book) => savedBook.key === book.key)) {
-        savedBooks.push(book);
-        await AsyncStorage.setItem('savedBooks', JSON.stringify(savedBooks));
-      }
-    } catch (error) {
-      console.error('Error saving book:', error);
-    }
-  };
 
   return (
     <View style={styles.container}>
-      <Text style={styles.heading}>Explore Genres</Text>
-      <Picker
-        selectedValue={selectedGenre}
-        onValueChange={(itemValue) => setSelectedGenre(itemValue)}
-        style={styles.picker}
-      >
-        {genres.map((genre) => (
-          <Picker.Item key={genre.value} label={genre.label} value={genre.value} />
-        ))}
-      </Picker>
+      <Text style={styles.heading}>Browse Genres</Text>
 
-      {loading ? (
-        <ActivityIndicator size="large" color="#6200ea" style={{ marginTop: 20 }} />
-      ) : (
-        <FlatList
-          data={books}
-          keyExtractor={(item) => item.key}
-          renderItem={({ item }) => (
-            <View style={styles.bookItem}>
-              <Text style={styles.bookTitle}>{item.title}</Text>
-              <Text style={styles.author}>
-                by {item.authors?.[0]?.name || 'Unknown Author'}
-              </Text>
-              <TouchableOpacity onPress={() => saveBook(item)}>
-                <Text style={styles.saveButton}>Save for Later</Text>
+      <View style={styles.genreButtons}>
+        {['fiction', 'mystery', 'science', 'romance'].map((genre) => (
+          <Button
+            key={genre}
+            title={genre.charAt(0).toUpperCase() + genre.slice(1)}
+            onPress={() => setSelectedGenre(genre)}
+          />
+        ))}
+      </View>
+
+      <FlatList
+        data={books}
+        keyExtractor={(item) => item.id}
+        renderItem={({ item }) => (
+          <View style={styles.bookItem}>
+            {item.image && <Image source={{ uri: item.image }} style={styles.bookImage} />}
+            <View style={styles.bookDetails}>
+              <Text style={styles.bookText}>{item.title}</Text>
+              <Text style={styles.bookText}>by {item.author}</Text>
+              <TouchableOpacity onPress={() => onSaveBook(item)}>
+                <Text style={styles.saveButton}>Save</Text>
               </TouchableOpacity>
             </View>
-          )}
-        />
-      )}
+          </View>
+        )}
+      />
     </View>
   );
 };
@@ -98,36 +78,38 @@ const styles = StyleSheet.create({
     backgroundColor: '#f5f5f5',
   },
   heading: {
-    fontSize: 22,
+    fontSize: 24,
     fontWeight: 'bold',
-    marginBottom: 10,
+    marginBottom: 20,
     textAlign: 'center',
   },
-  picker: {
-    marginVertical: 10,
-    backgroundColor: '#fff',
-    borderRadius: 10,
+  genreButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    marginBottom: 20,
   },
   bookItem: {
-    marginTop: 15,
-    padding: 15,
+    flexDirection: 'row',
+    padding: 10,
     backgroundColor: '#fff',
-    borderRadius: 8,
-    elevation: 2,
+    marginBottom: 10,
+    borderRadius: 5,
+    alignItems: 'center',
   },
-  bookTitle: {
+  bookImage: {
+    width: 50,
+    height: 75,
+    marginRight: 15,
+  },
+  bookDetails: {
+    flexDirection: 'column',
+  },
+  bookText: {
     fontSize: 16,
-    fontWeight: 'bold',
-  },
-  author: {
-    marginTop: 5,
-    color: '#555',
   },
   saveButton: {
-    color: 'green',
+    color: 'blue',
     marginTop: 10,
-    fontWeight: 'bold',
-    textAlign: 'right',
   },
 });
 
